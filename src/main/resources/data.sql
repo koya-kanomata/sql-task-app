@@ -1,0 +1,1 @@
+INSERT INTO tasks (title, status, due_date) VALUES ('SQLアプリを作る', 'DOING', CURRENT_DATE);
