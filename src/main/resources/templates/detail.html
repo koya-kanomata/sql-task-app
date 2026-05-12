@@ -9,7 +9,6 @@
 
 <div class="mb-3">
     <a href="/list" class="btn btn-secondary">一覧へ戻る</a>
-    <a href="/" class="btn btn-outline-secondary">SQL Consoleへ戻る</a>
 </div>
 
 <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
@@ -32,6 +31,12 @@
         <td th:text="${task.due_date}"></td>
     </tr>
 </table>
+
+<div class="mt-5 text-end">
+    <a href="/query" class="btn btn-link btn-sm p-0 text-secondary" style="font-size: 0.75rem;">SQL Consoleへ戻る</a>
+</div>
 </body>
 </html>
+
+
 
