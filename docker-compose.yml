@@ -3,15 +3,18 @@ services:
     image: postgres:16-alpine
     container_name: sql-task-db
     environment:
-      POSTGRES_DB: sqltaskdb
-      POSTGRES_USER: tasukuser
-      POSTGRES_PASSWORD: taskpass
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_DB_USERNAME: ${APP_DB_USERNAME}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tasukuser -d sqltaskdb"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sqltaskdb"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,11 +27,11 @@ services:
       db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sqltaskdb
-      SPRING_DATASOURCE_USERNAME: tasukuser
-      SPRING_DATASOURCE_PASSWORD: taskpass
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${APP_DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${APP_DB_PASSWORD}
     ports:
-      - "8080:8080"
+      - "80:8080"
 
 volumes:
   pgdata:
