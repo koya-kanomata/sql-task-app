@@ -1,50 +1,222 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>SQL Task Manager</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-</head>
-<body class="container mt-5">
-<h2>SQL Console</h2>
+<head th:replace="~{fragments/layout :: head('SQL Console')}"></head>
+<body>
+<div class="app-wrapper">
+    <nav th:replace="~{fragments/layout :: sidebar('query')}"></nav>
+    <div class="main-content">
+        <header th:replace="~{fragments/layout :: topbar('💻 SQL Console')}"></header>
+        <div class="page-body">
 
-<div class="mb-3">
-    <a href="/" class="btn btn-outline-primary">タスク一覧を見る</a>
-    <a href="/history" class="btn btn-outline-secondary ms-2">SQL履歴を見る</a>
-</div>
+            <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1rem; align-items: start;">
 
-<!-- SQL入力フォーム -->
-<form th:action="@{/execute}" method="post" class="mb-4">
-    <div class="mb-3">
-            <textarea name="query" class="form-control" rows="5"
-                      placeholder="SQLを入力してください (e.g. SELECT * FROM tasks;)"
-                      th:text="${previousQuery}"></textarea>
+                <!-- Left: Editor + Results -->
+                <div>
+                    <!-- SQL Editor Card -->
+                    <div class="card mb-4">
+                        <div class="card-header" style="justify-content: space-between;">
+                            <span>SQL エディタ</span>
+                            <span class="text-xs text-muted">Ctrl+Enter で実行</span>
+                        </div>
+                        <div class="card-body" style="padding: 0;">
+                            <form id="sqlForm" th:action="@{/execute}" method="post">
+                                <input type="hidden" name="returnPage" value="index">
+                                <div class="sql-editor-toolbar">
+                                    <span class="toolbar-label">SQL</span>
+                                    <span class="toolbar-hint">PostgreSQL</span>
+                                </div>
+                                <!-- Hidden textarea for form submission -->
+                                <textarea id="queryInput" name="query" style="display:none;"
+                                          th:text="${previousQuery}"></textarea>
+                                <!-- CodeMirror will be attached here -->
+                                <div id="editorContainer"></div>
+                                <div style="padding: 0.75rem 1rem; border-top: 1px solid rgba(255,255,255,0.1);
+                                            background: #2d3748; display: flex; gap: 0.5rem; align-items: center;">
+                                    <button type="submit" class="btn btn-primary btn-sm">▶ 実行</button>
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="clearEditor()"
+                                            style="color: #a0aec0;">クリア</button>
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="formatSQL()"
+                                            style="color: #a0aec0;">整形</button>
+                                    <button type="button" class="btn btn-ghost btn-sm" onclick="explainSQL()"
+                                            style="color: #a0aec0;">EXPLAIN</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Execution Result -->
+                    <div th:if="${executionTime}" class="alert alert-secondary mb-3">
+                        ⏱️ 実行時間: <strong th:text="${executionTime}"></strong>
+                    </div>
+                    <div th:if="${error}" class="alert alert-danger mb-3">
+                        ❌ <span th:text="${error}"></span>
+                    </div>
+                    <div th:if="${message}" class="alert alert-success mb-3">
+                        ✅ <span th:text="${message}"></span>
+                    </div>
+
+                    <!-- SELECT Results -->
+                    <div th:if="${results}" class="card">
+                        <div class="card-header" style="justify-content: space-between;">
+                            <span>📊 クエリ結果</span>
+                            <span class="text-xs text-muted" th:text="${results.size()} + ' 行'"></span>
+                        </div>
+                        <div class="result-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                <tr>
+                                    <th th:each="col : ${columns}" th:text="${col}"></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="row : ${results}">
+                                    <td th:each="col : ${columns}" th:text="${row.get(col)}"></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Schema + Snippets -->
+                <div>
+                    <!-- Schema Viewer -->
+                    <div class="card mb-3">
+                        <div class="card-header">🔍 スキーマ</div>
+                        <div id="schemaPanel">
+                            <div th:each="tbl : ${schemaTables}">
+                                <div class="schema-table-item"
+                                     onclick="toggleSchema(this.dataset.tableName)"
+                                     th:attr="data-table-name=${tbl.tableName}">
+                                    <span>▶</span>
+                                    <span th:text="${tbl.tableName}"></span>
+                                </div>
+                                <div class="schema-columns" th:id="'schema-' + ${tbl.tableName}">
+                                    <div class="schema-col-item" th:each="col : ${tbl.columns}">
+                                        <span th:text="${col.columnName}"></span>
+                                        <span class="schema-col-type" th:text="${col.dataType}"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SQL Snippets -->
+                    <div class="card">
+                        <div class="card-header">💡 スニペット</div>
+                        <div class="card-body" style="padding: 0.75rem;">
+                            <div class="snippet-list">
+                                <button class="snippet-btn" onclick="insertSnippet('SELECT * FROM tasks ORDER BY id;')">SELECT * FROM tasks</button>
+                                <button class="snippet-btn" onclick="insertSnippet('SELECT * FROM tasks WHERE status = \'TODO\' ORDER BY due_date;')">TODO タスク一覧</button>
+                                <button class="snippet-btn" onclick="insertSnippet('SELECT * FROM tasks WHERE due_date &lt; CURRENT_DATE AND status != \'DONE\';')">期限切れタスク</button>
+                                <button class="snippet-btn" onclick="insertSnippet('SELECT status, COUNT(*) as count FROM tasks GROUP BY status ORDER BY count DESC;')">ステータス別集計</button>
+                                <button class="snippet-btn" onclick="insertSnippet('SELECT priority, COUNT(*) as count FROM tasks GROUP BY priority ORDER BY count DESC;')">優先度別集計</button>
+                                <button class="snippet-btn" onclick="insertSnippet('SELECT * FROM tasks WHERE due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL \'7 days\';')">今週期限のタスク</button>
+                                <button class="snippet-btn" onclick="insertSnippet('INSERT INTO tasks (title, status, priority, due_date) VALUES (\'新しいタスク\', \'TODO\', \'MEDIUM\', CURRENT_DATE + 7);')">タスク追加</button>
+                                <button class="snippet-btn" onclick="insertSnippet('UPDATE tasks SET status = \'DONE\', updated_at = CURRENT_TIMESTAMP WHERE id = 1;')">ステータス更新</button>
+                                <button class="snippet-btn" onclick="insertSnippet('SELECT * FROM sql_history ORDER BY executed_at DESC LIMIT 10;')">SQL履歴を見る</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
-    <button type="submit" class="btn btn-primary">SQL実行</button>
-</form>
-
-<!-- 実行時間などのメタ情報 -->
-<div th:if="${executionTime}" class="alert alert-secondary">
-    実行時間: <span th:text="${executionTime}"></span>
 </div>
 
-<!-- エラー表示 -->
-<div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+// ===== CodeMirror Setup =====
+let editor;
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('queryInput');
+    const container = document.getElementById('editorContainer');
 
-<!-- 更新メッセージ -->
-<div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    editor = CodeMirror(container, {
+        value: textarea.value || '',
+        mode: 'text/x-sql',
+        theme: 'dracula',
+        lineNumbers: true,
+        indentWithTabs: false,
+        tabSize: 2,
+        extraKeys: {
+            'Ctrl-Enter': function() { submitSQL(); },
+            'Cmd-Enter':  function() { submitSQL(); },
+            'Ctrl-Space': 'autocomplete'
+        },
+        hintOptions: {
+            tables: {
+                tasks: ['id', 'title', 'description', 'status', 'priority', 'due_date', 'created_at', 'updated_at'],
+                sql_history: ['id', 'executed_at', 'query', 'outcome', 'execution_time_ms']
+            }
+        }
+    });
 
-<!-- SELECT結果の動的テーブル表示 -->
-<table th:if="${results}" class="table table-striped table-bordered mt-3">
-    <thead class="table-dark">
-    <tr>
-        <th th:each="col : ${columns}" th:text="${col}"></th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="row : ${results}">
-        <td th:each="col : ${columns}" th:text="${row.get(col)}"></td>
-    </tr>
-    </tbody>
-</table>
+    // Restore pending query from sessionStorage (e.g. from detail page)
+    const pending = sessionStorage.getItem('pendingQuery');
+    if (pending) {
+        editor.setValue(pending);
+        sessionStorage.removeItem('pendingQuery');
+    }
+
+    // Sync editor value to hidden textarea on submit
+    document.getElementById('sqlForm').addEventListener('submit', function() {
+        textarea.value = editor.getValue();
+    });
+});
+
+function submitSQL() {
+    document.getElementById('queryInput').value = editor.getValue();
+    document.getElementById('sqlForm').submit();
+}
+
+function clearEditor() {
+    if (editor) editor.setValue('');
+}
+
+function formatSQL() {
+    if (!editor) return;
+    let sql = editor.getValue();
+    // Simple formatter: uppercase keywords
+    const keywords = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'ORDER BY', 'GROUP BY',
+                      'HAVING', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN',
+                      'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM',
+                      'LIMIT', 'OFFSET', 'AS', 'ON', 'NOT', 'IN', 'BETWEEN',
+                      'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MAX', 'MIN'];
+    keywords.forEach(kw => {
+        const re = new RegExp('\\b' + kw + '\\b', 'gi');
+        sql = sql.replace(re, kw);
+    });
+    editor.setValue(sql);
+}
+
+function explainSQL() {
+    if (!editor) return;
+    const current = editor.getValue().trim();
+    if (current) {
+        editor.setValue('EXPLAIN ' + current);
+    }
+}
+
+function insertSnippet(sql) {
+    if (editor) {
+        editor.setValue(sql);
+        editor.focus();
+    }
+}
+
+// ===== Schema Toggle =====
+function toggleSchema(tableName) {
+    const panel = document.getElementById('schema-' + tableName);
+    if (panel) {
+        panel.classList.toggle('open');
+        // Also insert SELECT snippet
+        if (panel.classList.contains('open') && editor) {
+            insertSnippet('SELECT * FROM ' + tableName + ' LIMIT 10;');
+        }
+    }
+}
+</script>
 </body>
 </html>

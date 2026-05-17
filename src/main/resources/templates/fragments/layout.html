@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="html">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' | SQL Task Manager'">SQL Task Manager</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<!-- Sidebar fragment -->
+<nav class="sidebar" th:fragment="sidebar(activePage)">
+    <div class="sidebar-brand">
+        <h1>🗄️ SQL Task Manager</h1>
+        <div class="brand-sub">Manage tasks with SQL</div>
+    </div>
+    <div class="sidebar-nav">
+        <div class="nav-section-label">タスク管理</div>
+        <a th:href="@{/}" th:classappend="${activePage == 'dashboard'} ? 'active'">
+            <span class="nav-icon">📊</span> ダッシュボード
+        </a>
+        <a th:href="@{/list}" th:classappend="${activePage == 'list'} ? 'active'">
+            <span class="nav-icon">📋</span> タスク一覧
+        </a>
+        <a th:href="@{/tasks/new}" th:classappend="${activePage == 'new-task'} ? 'active'">
+            <span class="nav-icon">➕</span> タスク追加
+        </a>
+
+        <div class="nav-section-label">SQL ツール</div>
+        <a th:href="@{/query}" th:classappend="${activePage == 'query'} ? 'active'">
+            <span class="nav-icon">💻</span> SQL Console
+        </a>
+        <a th:href="@{/history}" th:classappend="${activePage == 'history'} ? 'active'">
+            <span class="nav-icon">🕐</span> SQL 履歴
+        </a>
+        <a th:href="@{/schema}" th:classappend="${activePage == 'schema'} ? 'active'">
+            <span class="nav-icon">🔍</span> スキーマ情報
+        </a>
+    </div>
+    <div class="sidebar-footer">
+        v1.0.0 &copy; SQL Task Manager
+    </div>
+</nav>
+
+<!-- Topbar fragment -->
+<header class="topbar" th:fragment="topbar(title)">
+    <h2 class="topbar-title" th:text="${title}">Page Title</h2>
+    <div class="topbar-actions">
+        <button class="btn btn-outline btn-sm" onclick="toggleTheme()" id="themeBtn">🌙 ダーク</button>
+    </div>
+</header>
+
+<!-- Scripts fragment -->
+<div th:fragment="scripts">
+    <!-- CodeMirror -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/sql-hint.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+
+    <script>
+    // ===== Dark Mode =====
+    (function() {
+        const saved = localStorage.getItem('theme') || 'light';
+        if (saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    })();
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        const btn = document.getElementById('themeBtn');
+        if (btn) btn.textContent = next === 'dark' ? '☀️ ライト' : '🌙 ダーク';
+    }
+
+    // Update button label on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const saved = localStorage.getItem('theme') || 'light';
+        const btn = document.getElementById('themeBtn');
+        if (btn) btn.textContent = saved === 'dark' ? '☀️ ライト' : '🌙 ダーク';
+    });
+
+    // ===== Mobile Sidebar =====
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+    }
+    </script>
+</div>
+</html>

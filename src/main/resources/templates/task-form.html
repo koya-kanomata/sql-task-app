@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${isEdit} ? 'タスク編集' : 'タスク追加')}"></head>
+<body>
+<div class="app-wrapper">
+    <nav th:replace="~{fragments/layout :: sidebar('new-task')}"></nav>
+    <div class="main-content">
+        <header th:replace="~{fragments/layout :: topbar(${isEdit} ? '✏️ タスク編集' : '➕ タスク追加')}"></header>
+        <div class="page-body">
+
+            <div style="max-width: 600px;">
+                <div class="card">
+                    <div class="card-header">
+                        <span th:text="${isEdit} ? 'タスクを編集する' : '新しいタスクを追加する'"></span>
+                    </div>
+                    <div class="card-body">
+
+                        <div th:if="${error}" class="alert alert-danger mb-4">⚠️ <span th:text="${error}"></span></div>
+
+                        <form th:action="${isEdit} ? '/tasks/edit/' + ${task.id} : '/tasks/new'"
+                              method="post">
+
+                            <div class="form-group">
+                                <label class="form-label" for="title">タイトル <span style="color: var(--danger);">*</span></label>
+                                <input type="text" id="title" name="title" class="form-control"
+                                       placeholder="タスクのタイトルを入力..."
+                                       th:value="${task != null ? task.title : ''}"
+                                       required maxlength="255">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="description">説明</label>
+                                <textarea id="description" name="description" class="form-control" rows="4"
+                                          placeholder="タスクの詳細説明（任意）..."
+                                          th:text="${task != null ? task.description : ''}"></textarea>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label" for="status">ステータス</label>
+                                    <select id="status" name="status" class="form-control">
+                                        <option value="TODO"    th:selected="${task == null or task.status == 'TODO'}">📝 TODO</option>
+                                        <option value="DOING"   th:selected="${task != null and task.status == 'DOING'}">🔄 DOING</option>
+                                        <option value="DONE"    th:selected="${task != null and task.status == 'DONE'}">✅ DONE</option>
+                                        <option value="BLOCKED" th:selected="${task != null and task.status == 'BLOCKED'}">🚫 BLOCKED</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="priority">優先度</label>
+                                    <select id="priority" name="priority" class="form-control">
+                                        <option value="HIGH"   th:selected="${task != null and task.priority == 'HIGH'}">🔴 HIGH</option>
+                                        <option value="MEDIUM" th:selected="${task == null or task.priority == 'MEDIUM'}">🟡 MEDIUM</option>
+                                        <option value="LOW"    th:selected="${task != null and task.priority == 'LOW'}">🟢 LOW</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="due_date">期限日</label>
+                                <input type="date" id="due_date" name="due_date" class="form-control"
+                                       th:value="${task != null ? task.due_date : ''}">
+                            </div>
+
+                            <div class="d-flex gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <span th:text="${isEdit} ? '💾 更新する' : '➕ 追加する'"></span>
+                                </button>
+                                <a th:href="${isEdit} ? '/detail/' + ${task.id} : '/list'"
+                                   class="btn btn-ghost">キャンセル</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('スキーマ情報')}"></head>
+<body>
+<div class="app-wrapper">
+    <nav th:replace="~{fragments/layout :: sidebar('schema')}"></nav>
+    <div class="main-content">
+        <header th:replace="~{fragments/layout :: topbar('🔍 スキーマ情報')}"></header>
+        <div class="page-body">
+
+            <div th:each="tbl : ${schemaTables}" class="card mb-4">
+                <div class="card-header" style="justify-content: space-between;">
+                    <span>📋 <strong th:text="${tbl.tableName}"></strong></span>
+                    <button class="btn btn-outline btn-sm"
+                            onclick="copyToConsole(this.dataset.sql)"
+                            th:attr="data-sql=|SELECT * FROM ${tbl.tableName} LIMIT 10;|">
+                        💻 Consoleで開く
+                    </button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>カラム名</th>
+                            <th>データ型</th>
+                            <th>NULL許可</th>
+                            <th>デフォルト値</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="col : ${tbl.columns}">
+                            <td style="font-family: monospace; font-weight: 600;" th:text="${col.columnName}"></td>
+                            <td><span class="badge badge-todo" th:text="${col.dataType}"></span></td>
+                            <td th:text="${col.nullable ? 'YES' : 'NO'}"></td>
+                            <td class="text-xs text-muted" th:text="${col.columnDefault != null ? col.columnDefault : '-'}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+function copyToConsole(sql) {
+    sessionStorage.setItem('pendingQuery', sql);
+    window.location.href = '/query';
+}
+</script>
+</body>
+</html>
